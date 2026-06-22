@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Chat — HTML</title>
+  <style>
+    :root{--bg:#f4f7fb;--card:#fff;--accent:#0ea5e9;--muted:#0b2140}
+    *{box-sizing:border-box}body{font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+    .card{width:100%;max-width:880px;background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 24px rgba(13,38,59,.08)}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    header h1{font-size:18px;margin:0}
+    .controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+    .controls input[type="password"], .controls select{padding:6px 8px;border-radius:8px;border:1px solid #e6eef7}
+    .messages{height:60vh;overflow:auto;border:1px solid #eef2f7;padding:12px;border-radius:8px;background:#fafcff}
+    .message{margin-bottom:12px;padding:8px 12px;border-radius:10px;max-width:85%;word-break:break-word}
+    .user{background:var(--accent);color:#fff;margin-left:auto}
+    .bot{background:#eef2ff;color:var(--muted);margin-right:auto}
+    .composer{display:flex;gap:8px;margin-top:12px}
+    .composer textarea{flex:1;padding:10px;border-radius:8px;border:1px solid #e6eef7;min-height:56px;font-size:14px}
+    .composer button{padding:10px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer}
+    .small{font-size:12px;color:#556;opacity:.9}
+    .hint{font-size:12px;color:#777;margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="card" role="main">
+    <header>
+      <h1>AI Chat — HTML-only</h1>
+      <div class="controls">
+        <label class="small">API Key:
+          <input id="api-key" type="password" placeholder="sk-... (not recommended)" />
+        </label>
+        <button id="save-key" title="Save API key to localStorage">Save</button>
+      </div>
+    </header>
+
+    <div id="messages" class="messages" aria-live="polite"></div>
+
+    <form id="chat-form" class="composer" autocomplete="off">
+      <textarea id="message-input" placeholder="Ask something..." required></textarea>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button type="submit">Send</button>
+        <button id="clear" type="button" style="background:#eee;color:#111;padding:6px;border-radius:8px;border:none;cursor:pointer">Clear</button>
+      </div>
+    </form>
+
+    <div class="hint">
+      This page sends requests directly to OpenAI. Do NOT paste real secrets here on a public/shared machine. For a safer setup, add a server endpoint and set your API key as an environment variable.
+    </div>
+  </div>
+
+  <script>
+    const keyInput = document.getElementById('api-key');
+    const saveBtn = document.getElementById('save-key');
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('message-input');
+    const messages = document.getElementById('messages');
+    const clearBtn = document.getElementById('clear');
+
+    // Load saved key if present
+    try { const saved = localStorage.getItem('OPENAI_API_KEY_HTML_DEMO'); if (saved) keyInput.value = saved; } catch (e) {}
+
+    saveBtn.addEventListener('click', () => {
+      try {
+        if (keyInput.value.trim()) {
+          localStorage.setItem('OPENAI_API_KEY_HTML_DEMO', keyInput.value.trim());
+          saveBtn.textContent = 'Saved';
+          setTimeout(()=> saveBtn.textContent = 'Save', 1400);
+        } else {
+          localStorage.removeItem('OPENAI_API_KEY_HTML_DEMO');
+          saveBtn.textContent = 'Removed';
+          setTimeout(()=> saveBtn.textContent = 'Save', 1400);
+        }
+      } catch (e) { alert('Could not access localStorage.'); }
+    });
+
+    clearBtn.addEventListener('click', () => { messages.innerHTML = ''; });
+
+    function addMessage(text, cls) {
+      const el = document.createElement('div');
+      el.className = 'message ' + cls;
+      el.textContent = text;
+      messages.appendChild(el);
+      messages.scrollTop = messages.scrollHeight;
+      return el;
+    }
+
+    async function callOpenAI(apiKey, message) {
+      const payload = {
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant.' },
+          { role: 'user', content: message }
+        ],
+        max_tokens: 700,
+        temperature: 0.6
+      };
+
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + apiKey
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(resp.status + ' ' + resp.statusText + ': ' + txt);
+      }
+      const data = await resp.json();
+      const reply = data?.choices?.[0]?.message?.content ?? '';
+      return reply;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      const apiKey = keyInput.value.trim();
+      if (!apiKey) { alert('Enter your OpenAI API key in the API Key box.'); return; }
+
+      addMessage(text, 'user');
+      input.value = '';
+      const botEl = addMessage('⏳ thinking...', 'bot');
+
+      try {
+        const reply = await callOpenAI(apiKey, text);
+        botEl.textContent = reply || '(no reply)';
+      } catch (err) {
+        botEl.textContent = 'Error: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
