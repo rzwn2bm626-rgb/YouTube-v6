@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mini YouTube</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>Mini YouTube</h1>
+    </header>
+
+    <section class="uploader">
+      <form id="uploadForm">
+        <input type="file" id="videoFile" name="video" accept="video/*" />
+        <button type="submit">Upload Video</button>
+      </form>
+      <div id="uploadMsg" class="muted"></div>
+    </section>
+
+    <section class="player-area">
+      <div class="video-list">
+        <h3>Videos</h3>
+        <ul id="videos"></ul>
+      </div>
+
+      <div class="player">
+        <video id="videoPlayer" controls preload="metadata" width="720">
+          <source id="videoSource" src="" type="video/mp4" />
+          Your browser does not support HTML5 video.
+        </video>
+        <div id="currentName" class="muted"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/client.js"></script>
+</body>
+</html>
